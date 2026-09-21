@@ -59,7 +59,7 @@ export class StreamingSpeech {
 }
 
 function speechBoundary(text: string): number {
-  let fence = false, inline = false, brackets = 0, link = false, end = 0;
+  let fence = false, inline = false, brackets = 0, link = false, end = 0, parens = 0, opened = 0;
   for (let i = 0; i < text.length; i++) {
     if (text.startsWith('```', i)) { fence = !fence; i += 2; continue; }
     if (fence) continue;
@@ -69,6 +69,13 @@ function speechBoundary(text: string): number {
     if (text[i] === ']') { brackets = Math.max(0, brackets - 1); if (text[i + 1] === '(') link = true; }
     if (link) { if (text[i] === ')') link = false; continue; }
     if (brackets) continue;
+    // A parenthetical is one phrase, however many sentences it holds. Split
+    // apart, a speech engine that drops or voices asides sees two halves with
+    // one parenthesis each and can do neither. Bounded, so a stray "(" cannot
+    // hold speech back indefinitely.
+    if (text[i] === '(') { if (!parens) opened = i; parens++; }
+    if (text[i] === ')') parens = Math.max(0, parens - 1);
+    if (parens && i - opened < 600) continue;
     const punctuation = /[.!?。！？]/.test(text[i]);
     const boundary = punctuation && (/[。！？]/.test(text[i]) || /\s/.test(text[i + 1] || ''));
     // Avoid common title/initial/decimal breaks; the next sentence or completion flushes them.
