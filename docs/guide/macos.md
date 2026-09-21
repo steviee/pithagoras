@@ -179,6 +179,19 @@ and `deploy/macos/pi-settings.json` makes it the default, with thinking off.
   reliable at tool calls, and without a thinking mode.
 - Keep `contextWindow` at or below the per-model context limit set in oMLX.
 
+::: warning Set Qwen3-Coder's sampling in oMLX
+oMLX does not read a model's `generation_config.json`. Without per-model settings
+it samples with its global defaults — temperature 1.0, no top-k and no
+repetition penalty — and pi's SDK in the portal sends none of its own. With
+those, Qwen3-Coder 4-bit falls into loops, repeating the same two sentences until
+it runs out of tokens, and emits tool calls as plain text more often.
+
+Set Qwen's recommended values for the model in the oMLX admin page (**Models →
+Qwen3-Coder-30B-A3B-Instruct-4bit → Settings**): temperature `0.7`, top-p `0.8`,
+top-k `20`, repetition penalty `1.05`. In a test with the browser tools, correct
+`browser_navigate` calls rose from 4 of 6 to 7 of 8.
+:::
+
 ::: warning Thinking models in voice mode
 With Qwen3.8-27B through oMLX, multi-turn voice conversations regularly produced
 several rephrased answers in one reply — the model did not stop after the first.
