@@ -37,6 +37,10 @@ Then open `http://<host>:4100` and choose a password: the portal has none until 
 walks you through adding a model provider (a local llama.cpp / Ollama server, OpenRouter,
 Anthropic, …); you can also set a key in `.env`.
 
+On a Mac with Apple Silicon, run `deploy/macos/setup.sh` instead: it runs the
+portal in OrbStack and the models natively in oMLX. See
+[macOS (Apple Silicon)](https://thecodacus.github.io/pithagoras/guide/macos).
+
 The container uses host networking, so pi and its extensions reach services on the box at
 `127.0.0.1` — a llama.cpp server on `:8080`, for example — exactly as they would outside a
 container. It needs the Docker socket mount for the Docker extension, which runs the containers

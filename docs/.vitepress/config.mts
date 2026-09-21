@@ -31,6 +31,7 @@ export default defineConfig({
           { text: "What is Pithagoras", link: "/guide/what-is-pithagoras" },
           { text: "Deploying", link: "/guide/deploying" },
           { text: "Upgrading", link: "/guide/upgrading" },
+          { text: "macOS (Apple Silicon)", link: "/guide/macos" },
           { text: "Sessions", link: "/guide/sessions" },
           { text: "Projects", link: "/guide/projects" },
           { text: "Agents", link: "/guide/agents" },
