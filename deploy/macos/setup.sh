@@ -68,7 +68,7 @@ compose up -d --build
 say "Configuring pi (provider omlx)"
 agent_dir=/data/home/.pi/agent
 compose exec -T portal mkdir -p "$agent_dir"
-for pair in "pi-models.json:models.json" "pi-settings.json:settings.json"; do
+for pair in "pi-models.json:models.json" "pi-settings.json:settings.json" "pi-AGENTS.md:AGENTS.md"; do
   src="${pair%%:*}"; dst="${pair##*:}"
   if $FORCE || ! compose exec -T portal test -s "$agent_dir/$dst"; then
     compose cp "$HERE/$src" "portal:$agent_dir/$dst"

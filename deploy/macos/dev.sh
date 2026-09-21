@@ -50,6 +50,7 @@ mkdir -p "$SESSION_DIR" "$BIN_DIR" "$AGENT_HOME" "$CHANNELS_DIR" "$PI_CODING_AGE
 # in the UI survives a restart.
 [ -s "$PI_CODING_AGENT_DIR/models.json" ] || cp deploy/macos/pi-models.json "$PI_CODING_AGENT_DIR/models.json"
 [ -s "$PI_CODING_AGENT_DIR/settings.json" ] || cp deploy/macos/pi-settings.json "$PI_CODING_AGENT_DIR/settings.json"
+[ -s "$PI_CODING_AGENT_DIR/AGENTS.md" ] || cp deploy/macos/pi-AGENTS.md "$PI_CODING_AGENT_DIR/AGENTS.md"
 
 [ -d node_modules ] || npm install
 # The extensions that have a build of their own (terminal, files, git, docs …)

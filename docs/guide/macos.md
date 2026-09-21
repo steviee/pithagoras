@@ -48,9 +48,9 @@ The script is safe to run again. It:
 2. checks that oMLX answers with that key;
 3. builds and starts the portal with
    `docker compose -f docker-compose.yml -f docker-compose.macos.yml up -d --build`;
-4. installs pi's `models.json` and `settings.json` for the `omlx` provider into
-   the data volume (`/data/home/.pi/agent`). Existing files are kept unless you
-   pass `--force`.
+4. installs pi's `models.json` and `settings.json` for the `omlx` provider, and
+   an `AGENTS.md` with conversation rules, into the data volume
+   (`/data/home/.pi/agent`). Existing files are kept unless you pass `--force`.
 
 Then open `http://localhost:4100` and log in with the password from `.env`.
 
@@ -198,6 +198,22 @@ several rephrased answers in one reply — the model did not stop after the firs
 Sending `preserve_thinking: false` made it rarer but did not remove it. Qwen3-Coder
 has no thinking mode and is the model this setup uses.
 :::
+
+### Conversation rules
+
+`deploy/macos/pi-AGENTS.md` becomes pi's global `AGENTS.md`, loaded into every
+session. Qwen3-Coder works from an English system prompt, and in German
+conversations it tended to add English notes in parentheses ("You should be
+aware that …"), to describe pages it had not opened, and to rephrase answers it
+had already given. The file asks it to stay in the user's language, leave out
+such asides, report only what a tool returned and say each thing once. Edit it
+in the volume and restart the portal to change the rules:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.macos.yml cp \
+  deploy/macos/pi-AGENTS.md portal:/data/home/.pi/agent/AGENTS.md
+docker compose -f docker-compose.yml -f docker-compose.macos.yml restart portal
+```
 
 To add another model, place it under `~/.omlx/models`, add an entry to
 `pi-models.json`, and run `deploy/macos/setup.sh --force`.
