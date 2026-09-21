@@ -9,8 +9,14 @@ export const allowNoPassword = (): boolean => /^(1|true|yes)$/i.test(process.env
  * Where the portal listens: everywhere once there is a login in front of it (or one to be chosen
  * on the setup screen), and on this machine only where it is open by choice, unless ALLOW_OPEN says otherwise.
  */
-export function bindHost(login: boolean, allowOpen: string | undefined): string {
-  return login || allowOpen === '1' ? '0.0.0.0' : '127.0.0.1';
+export function bindHost(login: boolean, allowOpen: string | undefined, wanted: string | undefined = process.env.PORTAL_HOST): string {
+  const open = login || allowOpen === '1';
+  // PORTAL_HOST narrows the address, never widens it: a portal with no login stays on this machine whatever it says.
+  // 127.0.0.1 keeps a portal with a login off the network, which host networking on Docker for Mac would otherwise
+  // open to the LAN as well.
+  const narrowed = wanted?.trim();
+  if (!open) return '127.0.0.1';
+  return narrowed || '0.0.0.0';
 }
 
 /**

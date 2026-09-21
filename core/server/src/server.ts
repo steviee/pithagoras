@@ -1864,6 +1864,7 @@ const server = (tls ? createHttpsServer(tls, app) : createHttpServer(app)).liste
   host,
   () => {
   console.log(`pithagoras listening on :${PORT}${tls ? " (https)" : ""}`);
+  console.log(`  address:  ${host}`);
   console.log(`  local bin: ${BIN_DIR}`);
   console.log(`  executor: ${EXECUTOR_KIND}`);
   console.log(`  workspaces: ${WORKSPACE_ROOT}`);

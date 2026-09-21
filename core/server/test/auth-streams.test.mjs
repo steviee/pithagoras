@@ -175,6 +175,11 @@ test("the portal listens on every interface once it has a login or is waiting fo
   assert.equal(bindHost(true, undefined), "0.0.0.0");
   assert.equal(bindHost(false, undefined), "127.0.0.1");
   assert.equal(bindHost(false, "1"), "0.0.0.0");
+  // PORTAL_HOST narrows a portal with a login, and never opens one without.
+  assert.equal(bindHost(true, undefined, "127.0.0.1"), "127.0.0.1");
+  assert.equal(bindHost(true, undefined, " "), "0.0.0.0");
+  assert.equal(bindHost(false, undefined, "0.0.0.0"), "127.0.0.1");
+  assert.equal(bindHost(false, "1", "127.0.0.1"), "127.0.0.1");
 });
 
 test("the cookie is Secure where the portal serves TLS, and only there", () => {
