@@ -3,6 +3,8 @@ import { resolve } from "node:path";
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 
+const api = process.env.PITHAGORAS_API ?? "http://127.0.0.1:4100";
+
 export default defineConfig({
   build: {
     rollupOptions: {
@@ -41,5 +43,13 @@ export default defineConfig({
   resolve: { dedupe: ["react", "react-dom"] },
   // The portal's default port. A test run points it at a dead one (PITHAGORAS_API), so that a request no test
   // answered cannot reach a portal that happens to run on this machine. Streams too: an extension's, under /api/x.
-  server: { port: 5190, proxy: { "/api": { target: process.env.PITHAGORAS_API ?? "http://localhost:4100", ws: true } } },
+  // 127.0.0.1 rather than localhost: on macOS localhost resolves to ::1 first, and a portal bound to IPv4 loopback
+  // (PORTAL_HOST=127.0.0.1) never answers there. /browser-ui is the agent's browser, which the portal proxies.
+  server: {
+    port: 5190,
+    proxy: {
+      "/api": { target: api, ws: true },
+      "/browser-ui": { target: api, ws: true },
+    },
+  },
 });

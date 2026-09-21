@@ -250,7 +250,16 @@ export default function terminal(portal) {
     const id = randomUUID().slice(0, 8);
     // -q quiet, -f flush on every write so output is not held back, -e return the
     // command's exit status, and /dev/null because we want the pty, not a log.
-    const proc = spawn("script", ["-qfec", process.env.SHELL || "bash -il", "/dev/null"], {
+    // That is util-linux. BSD script on macOS (a portal run from source there)
+    // refuses to start unless its own stdin is a terminal, and here it is a pipe.
+    // Python's pty.spawn allocates the same pty and tolerates the pipe, and a
+    // python3 comes with the Command Line Tools that any build there needs.
+    // Without /proc, closing and resizing take their fallbacks below.
+    const [command, args] =
+      process.platform === "darwin"
+        ? ["python3", ["-c", "import pty, sys; pty.spawn(sys.argv[1:])", process.env.SHELL || "/bin/zsh", "-il"]]
+        : ["script", ["-qfec", process.env.SHELL || "bash -il", "/dev/null"]];
+    const proc = spawn(command, args, {
       cwd,
       // Without the agent's mark: what the person starts here (tmux, a server
       // under setsid) is theirs, and not a job for the chat to list and stop.
