@@ -1,0 +1,22 @@
+# macOS on Apple Silicon, layered over docker-compose.yml:
+#
+#   docker compose -f docker-compose.yml -f docker-compose.macos.yml up -d --build
+#
+# Written for OrbStack, whose host networking shares localhost with the Mac in
+# both directions — so the portal reaches oMLX and the native voice services at
+# 127.0.0.1, and the Mac reaches the portal at http://localhost:4100. Models run
+# natively on the Mac: containers get no Metal GPU.
+#
+# See docs/guide/macos.md.
+services:
+  portal:
+    # WORKSPACES_DIR (required by the base file) is set in .env by
+    # deploy/macos/setup.sh: ~/Pithagoras/workspaces unless you change it.
+    environment:
+      # Under host networking on a Mac, a port bound to 0.0.0.0 is reachable
+      # from the LAN as well. Loopback keeps the portal on this machine; set
+      # PORTAL_HOST=0.0.0.0 in .env to open it up deliberately.
+      PORTAL_HOST: ${PORTAL_HOST:-127.0.0.1}
+      # Read by the "omlx" provider in pi's models.json (deploy/macos/pi-models.json).
+      OMLX_API_KEY: ${OMLX_API_KEY:-}
+      TZ: ${TZ:-Europe/Berlin}
