@@ -151,9 +151,12 @@ export async function prepareDatabase(): Promise<void> {
   console.log(`[portal] upgrading the database from version ${check.from} to ${SCHEMA_VERSION}`);
   const view = maintenance();
   const outcome = await new Promise<{ backup?: string } | { error: string; damaged: boolean }>((resolve) => {
-    const worker = new Worker(new URL("./db-upgrade-worker.js", import.meta.url), {
+    // Run from source (tsx watch, npm run dev:server) this file is the .ts beside the worker's .ts, and no .js is there.
+    const fromSource = import.meta.url.endsWith(".ts");
+    const worker = new Worker(new URL(fromSource ? "./db-upgrade-worker.ts" : "./db-upgrade-worker.js", import.meta.url), {
       // Not the server's own flags: some, such as --input-type, are refused in a worker and would fail the upgrade.
-      execArgv: [],
+      // From source the worker needs tsx to load TypeScript, and nothing else of them.
+      execArgv: fromSource ? ["--import", "tsx"] : [],
       workerData: { file: dbFile(), from: check.from, backupDir: path.join(DATA_DIR, "backups"), skipBackup: process.env.PORTAL_UPGRADE_BACKUP === "skip" },
     });
     let settled = false;
