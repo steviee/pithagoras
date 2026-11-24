@@ -1,12 +1,15 @@
-"""Voxtral TTS for Pithagoras on Apple Silicon, speaking the audio.cpp protocol.
+"""Voxtral TTS for Pithagoras on Apple Silicon, on OpenAI's /v1/audio/speech.
 
-The portal's "audio-cpp" runtime POSTs JSON to /v1/audio/speech and expects a
-stream of raw 24 kHz mono s16le PCM back. This serves exactly that from
-mistralai/Voxtral-4B-TTS-2603 running in MLX, so the portal needs no changes:
-point its Breeze speech URL here.
+mistralai/Voxtral-4B-TTS-2603 running in MLX, for the portal's Voice servers
+extension, which asks in one of two ways:
 
-Voxtral has fixed voices tied to a language, so the voice is picked per request
-from the language of the text. Fields the portal sends for Breeze (instruction,
+  response_format "wav"   Fixed voices: the phrase as one 24 kHz mono WAV. A
+                          "voice" names a Voxtral voice (de_female, …).
+  anything else           Breeze-TTS-2 through audio.cpp: raw 24 kHz mono s16le
+                          PCM, streamed while it is spoken.
+
+Voxtral's voices are tied to a language, so without a voice of its own a phrase
+gets one by the language of its text. Fields sent for Breeze (instruction,
 guidance, reference audio) have no meaning here and are ignored.
 
 Environment:
@@ -17,12 +20,14 @@ Environment:
   VOXTRAL_HOST/PORT  default 127.0.0.1:7864
 """
 
+import io
 import json
 import os
 import re
 import sys
 import threading
 import time
+import wave
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 import mlx.core as mx
@@ -92,6 +97,16 @@ def speakable(text: str, german: bool) -> str:
     return re.sub(r",$", ".", spoken)
 
 
+def wav_of(pcm: bytes) -> bytes:
+    out = io.BytesIO()
+    with wave.open(out, "wb") as w:
+        w.setnchannels(1)
+        w.setsampwidth(2)
+        w.setframerate(SAMPLE_RATE)
+        w.writeframes(pcm)
+    return out.getvalue()
+
+
 def voice_for(text: str) -> str:
     if re.search(r"[äöüÄÖÜß]", text) or len(GERMAN.findall(text)) >= 2:
         return VOICE_DE
@@ -131,6 +146,15 @@ class Handler(BaseHTTPRequestHandler):
             return self._json(200, {"status": "ok", "model": MODEL, "steps": STEPS})
         self._json(404, {"error": "not found"})
 
+    def _wav(self, pcm: bytes, voice: str):
+        body = wav_of(pcm)
+        self.send_response(200)
+        self.send_header("Content-Type", "audio/wav")
+        self.send_header("Content-Length", str(len(body)))
+        self.send_header("X-Voice", voice)
+        self.end_headers()
+        self.wfile.write(body)
+
     def do_POST(self):
         if self.path != "/v1/audio/speech":
             return self._json(404, {"error": "not found"})
@@ -141,9 +165,13 @@ class Handler(BaseHTTPRequestHandler):
             return self._json(400, {"error": "body must be JSON"})
         if not text:
             return self._json(400, {"error": "input required"})
-        voice = voice_for(STAGE_DIRECTION.sub(" ", text))
-        spoken = speakable(text, german=voice == VOICE_DE)
+        wav = request.get("response_format") == "wav"
+        asked = str(request.get("voice") or "").strip()
+        voice = asked if wav and re.fullmatch(r"[a-z]+(_[a-z]+)+", asked) else voice_for(STAGE_DIRECTION.sub(" ", text))
+        spoken = speakable(text, german=voice == VOICE_DE or voice.startswith("de_"))
         if not re.search(r"\w", spoken):
+            if wav:
+                return self._wav(SILENCE, voice)
             # Nothing left to say. A short silence rather than an error: the
             # portal treats an empty body as a failed synthesis.
             self.send_response(200)
@@ -156,6 +184,24 @@ class Handler(BaseHTTPRequestHandler):
         text = spoken
         if not busy.acquire(blocking=False):
             return self._json(409, {"error": "busy"})
+        if wav:
+            try:
+                started = time.time()
+                chunks = [np.array(r.audio, dtype=np.float32).reshape(-1) for r in model.generate(text=text, voice=voice)]
+                audio = np.concatenate(chunks) if chunks else np.zeros(0, dtype=np.float32)
+                self._wav((np.clip(audio, -1.0, 1.0) * 32767.0).astype("<i2").tobytes(), voice)
+                print(f"{voice} {audio.size / SAMPLE_RATE:.1f}s audio (wav) in {time.time() - started:.2f}s: {text[:60]!r}", flush=True)
+            except (BrokenPipeError, ConnectionResetError):
+                pass
+            except Exception as e:  # an unknown voice, for one
+                try:
+                    self._json(400, {"error": str(e)})
+                except OSError:
+                    pass
+            finally:
+                mx.clear_cache()
+                busy.release()
+            return
         try:
             started = time.time()
             self.send_response(200)

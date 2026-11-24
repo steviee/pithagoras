@@ -233,20 +233,24 @@ reachable from the LAN. The portal therefore listens on `127.0.0.1`
 (`PORTAL_HOST`). To reach it from other devices, set `PORTAL_HOST=0.0.0.0`, and
 read [Deploying](/guide/deploying) first.
 
-The browser add-on's own viewer (`3010`/`3011`) listens on `127.0.0.1` as
+The Browser extension's own viewer (`3010`/`3011`) listens on `127.0.0.1` as
 well and is reached through the portal's `/browser-ui`. Leave `BROWSER_BIND`
 unset to keep it that way; see [The agent's browser](/guide/browser).
 
 ## Browser
 
-**Browser → Install** pulls `lscr.io/linuxserver/chromium`, which has an arm64
-build, and runs it exactly as on Linux. Set a password first; the portal holds it
-and proxies the viewer, so you are not asked for it again.
+Install **Browser** from **Settings → Extensions → Discover → Comes with
+Pithagoras**; it brings Docker for extensions with it. Its page then pulls
+`lscr.io/linuxserver/chromium`, which has an arm64 build, and runs it exactly as
+on Linux, through OrbStack. Set a password first; the portal holds it and
+proxies the viewer, so you are not asked for it again. Run from source,
+`deploy/macos/dev.sh` points `DOCKER_SOCKET` at OrbStack's socket when there is
+no `/var/run/docker.sock`. See [The agent's browser](/guide/browser).
 
 ## Voice
 
-The managed Voice add-on builds CUDA runtimes in an NVIDIA container and does
-not run on a Mac. `deploy/macos-voice/setup.sh` runs speech natively on the GPU
+The Voice service extension builds CUDA runtimes in an NVIDIA container and
+does not run on a Mac. `deploy/macos-voice/setup.sh` runs speech natively on the GPU
 instead and installs two launchd agents that start at login:
 
 | Service | Address | Model |
@@ -254,8 +258,10 @@ instead and installs two launchd agents that start at login:
 | whisper.cpp `whisper-server` (Metal) | `http://127.0.0.1:8178/inference` | Whisper large-v3-turbo, q5_0 |
 | Voxtral TTS on mlx-audio (MLX) | `http://127.0.0.1:7864/v1/audio/speech` | `mlx-community/Voxtral-4B-TTS-2603-mlx-4bit` |
 
-The speech service answers in the audio.cpp protocol — raw 24 kHz PCM as it is
-generated — so the portal needs no changes:
+Both speak the way the [Voice servers](/guide/voice-servers) extension asks:
+whisper.cpp's `/inference` for recognition, and OpenAI's `/v1/audio/speech` for
+speech, as a whole WAV or, the way audio.cpp streams Breeze, as raw 24 kHz PCM
+while it is spoken:
 
 ```bash
 deploy/macos-voice/setup.sh                    # build, download, start
@@ -263,22 +269,37 @@ TTS_ENGINE=breeze deploy/macos-voice/setup.sh  # Breeze-TTS-2 on audio.cpp inste
 deploy/macos-voice/setup.sh uninstall          # remove the launchd agents
 ```
 
-Then open **Settings → Add-ons → Voice → Advanced connection**, choose
-**Breeze audio.cpp** (Streaming) as the speech runtime and enter both URLs. Leave
-**Install voice** alone; that is the NVIDIA installer. Logs are in
-`~/Library/Logs/Pithagoras`.
+Then, in the portal:
 
-::: warning Voxtral moved from 7863 to 7864
-The managed add-on now uses 7863 for its CPU engines, and the portal treats an
-address there as its own container, trying to load and unload models on it.
-After updating, run `deploy/macos-voice/setup.sh` again so the launchd agent
-listens on 7864, and change the speech synthesis URL to match.
+1. Install **Voice servers** from **Settings → Extensions → Discover → Comes
+   with Pithagoras**. Not **Voice service**: that is the NVIDIA installer.
+2. On its page (**Settings → Extension settings → Voice servers**) set
+   **Speech recognition URL** to `http://127.0.0.1:8178/inference` and
+   **Speech synthesis URL** to `http://127.0.0.1:7864/v1/audio/speech` (Breeze:
+   `http://127.0.0.1:7861/v1/audio/speech`).
+3. Choose how speech is asked for. Streamed, which starts speaking sooner:
+   switch on **Custom voices**, then **Breeze-TTS-2 → audio.cpp**; Voxtral
+   ignores what is sent for Breeze's designed voices and clones. Or leave
+   custom voices off (**Fixed voices**): each phrase comes as one WAV, and
+   **Voices** can list Voxtral's own (`de_female`, `casual_male`, …) to give an
+   agent one of them. Empty, the voice follows the language as below.
+4. **Use for voice mode**.
+
+Logs are in `~/Library/Logs/Pithagoras`.
+
+::: warning Updating from an earlier version
+Voxtral moved from 7863 to 7864: the Voice service extension uses 7863 for its
+CPU engines. Run `deploy/macos-voice/setup.sh` again so the launchd agent
+listens on 7864. The upgrade hands the recognition address over to Voice
+servers, but not the speech address, which was set for the old "Breeze
+audio.cpp" runtime: enter it on the page as above.
 :::
 
 Voxtral's voices belong to a language, so the service picks one per sentence
 from the language of the text: `de_female` for German, `casual_female` for
 English. `VOXTRAL_VOICE_DE`, `VOXTRAL_VOICE_EN` and `VOXTRAL_STEPS` change that.
-The portal's voice description and reference clones have no effect on Voxtral.
+A voice chosen under Fixed voices wins over that. Designed voices and
+reference clones have no effect on Voxtral.
 
 Models write stage directions into spoken replies — `(chuckles)`, `*sighs*`,
 `(very quiet)`, `(plays a bit of piano music)`. The portal invites a few of those

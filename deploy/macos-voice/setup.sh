@@ -1,17 +1,18 @@
 #!/usr/bin/env bash
 # Voice for Pithagoras on macOS (Apple Silicon), running natively on the GPU.
 #
-# The managed Voice add-on builds CUDA runtimes inside an NVIDIA container and
+# The Voice service extension builds CUDA runtimes inside an NVIDIA container and
 # cannot run on a Mac. This runs speech natively instead, as launchd agents:
 #
 #   whisper.cpp  whisper-server   127.0.0.1:8178/inference         speech to text (Metal)
 #   Voxtral TTS  mlx-audio        127.0.0.1:7864/v1/audio/speech   text to speech (MLX, default)
 #   audio.cpp    audiocpp_server  127.0.0.1:7861/v1/audio/speech   Breeze-TTS-2 (Metal, TTS_ENGINE=breeze)
 #
-# Both speech engines speak the audio.cpp protocol, so the portal uses its
-# existing audio-cpp runtime: Settings → Add-ons → Voice → Advanced connection.
-# None uses a port of the managed add-on (7862, 7863 and 8188): the portal takes
-# an address there for its own container and tries to load and unload models.
+# Both speech engines answer OpenAI's /v1/audio/speech, streamed as audio.cpp
+# streams Breeze, so the portal speaks to them through its Voice servers
+# extension: Settings → Extension settings → Voice servers.
+# None uses a port of the Voice service extension (7862, 7863 and 8188): an
+# address there is taken for that container's own.
 #
 #   deploy/macos-voice/setup.sh              # build, download, install and start
 #   deploy/macos-voice/setup.sh uninstall    # stop and remove the launchd agents
@@ -227,10 +228,11 @@ for _ in $(seq 1 90); do
   t="$(curl -s -o /dev/null -w '%{http_code}' -m 2 "http://127.0.0.1:$tts_port/health" || true)"
   if [ "$w" = 200 ] && [ "$t" = 200 ]; then
     cat <<DONE
-Voice is running ($TTS_ENGINE). In the portal: Settings → Add-ons → Voice → Advanced connection
-  Speech runtime:     Breeze audio.cpp · streaming
-  Whisper URL:        http://127.0.0.1:$WHISPER_PORT/inference
-  Breeze speech URL:  http://127.0.0.1:$tts_port/v1/audio/speech
+Voice is running ($TTS_ENGINE). In the portal: Settings → Extension settings → Voice servers
+  Speech recognition URL:  http://127.0.0.1:$WHISPER_PORT/inference
+  Speech synthesis URL:    http://127.0.0.1:$tts_port/v1/audio/speech
+  Streamed: Custom voices on, Breeze-TTS-2 → audio.cpp (or Fixed voices, one WAV per phrase)
+  Then: Use for voice mode
 Logs: $LOGS
 DONE
     exit 0
