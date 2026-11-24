@@ -5,13 +5,13 @@
 # cannot run on a Mac. This runs speech natively instead, as launchd agents:
 #
 #   whisper.cpp  whisper-server   127.0.0.1:8178/inference         speech to text (Metal)
-#   Voxtral TTS  mlx-audio        127.0.0.1:7863/v1/audio/speech   text to speech (MLX, default)
+#   Voxtral TTS  mlx-audio        127.0.0.1:7864/v1/audio/speech   text to speech (MLX, default)
 #   audio.cpp    audiocpp_server  127.0.0.1:7861/v1/audio/speech   Breeze-TTS-2 (Metal, TTS_ENGINE=breeze)
 #
 # Both speech engines speak the audio.cpp protocol, so the portal uses its
 # existing audio-cpp runtime: Settings → Add-ons → Voice → Advanced connection.
-# Neither uses 7862, the managed add-on's port, where the portal would try to
-# load and unload models.
+# None uses a port of the managed add-on (7862, 7863 and 8188): the portal takes
+# an address there for its own container and tries to load and unload models.
 #
 #   deploy/macos-voice/setup.sh              # build, download, install and start
 #   deploy/macos-voice/setup.sh uninstall    # stop and remove the launchd agents
@@ -24,7 +24,7 @@
 #   VOXTRAL_MODEL   default mlx-community/Voxtral-4B-TTS-2603-mlx-4bit
 #   VOXTRAL_STEPS   flow-matching steps, default 6 (8 is the model default; fewer is faster)
 #   VOXTRAL_VOICE_DE / VOXTRAL_VOICE_EN   default de_female / casual_female
-#   VOXTRAL_PORT    default 7863
+#   VOXTRAL_PORT    default 7864
 #   TTS_PORT        Breeze port, default 7861
 set -euo pipefail
 
@@ -38,7 +38,7 @@ VOXTRAL_MODEL="${VOXTRAL_MODEL:-mlx-community/Voxtral-4B-TTS-2603-mlx-4bit}"
 VOXTRAL_STEPS="${VOXTRAL_STEPS:-6}"
 VOXTRAL_VOICE_DE="${VOXTRAL_VOICE_DE:-de_female}"
 VOXTRAL_VOICE_EN="${VOXTRAL_VOICE_EN:-casual_female}"
-VOXTRAL_PORT="${VOXTRAL_PORT:-7863}"
+VOXTRAL_PORT="${VOXTRAL_PORT:-7864}"
 TTS_PORT="${TTS_PORT:-7861}"
 AGENTS="$HOME/Library/LaunchAgents"
 LOGS="$HOME/Library/Logs/Pithagoras"

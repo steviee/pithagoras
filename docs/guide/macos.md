@@ -9,7 +9,7 @@ reaches them over localhost.
 ```
 Browser ──▶ portal (Docker, OrbStack host networking) ──▶ oMLX :8000        (native, Metal)
                     │                                 ├─▶ whisper :8178     (native, Metal)
-                    │                                 └─▶ Voxtral TTS :7863 (native, MLX)
+                    │                                 └─▶ Voxtral TTS :7864 (native, MLX)
                     └─▶ pithagoras-browser (Docker, arm64)
 ```
 
@@ -248,7 +248,7 @@ instead and installs two launchd agents that start at login:
 | Service | Address | Model |
 |---|---|---|
 | whisper.cpp `whisper-server` (Metal) | `http://127.0.0.1:8178/inference` | Whisper large-v3-turbo, q5_0 |
-| Voxtral TTS on mlx-audio (MLX) | `http://127.0.0.1:7863/v1/audio/speech` | `mlx-community/Voxtral-4B-TTS-2603-mlx-4bit` |
+| Voxtral TTS on mlx-audio (MLX) | `http://127.0.0.1:7864/v1/audio/speech` | `mlx-community/Voxtral-4B-TTS-2603-mlx-4bit` |
 
 The speech service answers in the audio.cpp protocol — raw 24 kHz PCM as it is
 generated — so the portal needs no changes:
@@ -260,8 +260,16 @@ deploy/macos-voice/setup.sh uninstall          # remove the launchd agents
 ```
 
 Then open **Settings → Add-ons → Voice → Advanced connection**, choose
-**Breeze audio.cpp · streaming** and enter both URLs. Leave **Install voice**
-alone; that is the NVIDIA installer. Logs are in `~/Library/Logs/Pithagoras`.
+**Breeze audio.cpp** (Streaming) as the speech runtime and enter both URLs. Leave
+**Install voice** alone; that is the NVIDIA installer. Logs are in
+`~/Library/Logs/Pithagoras`.
+
+::: warning Voxtral moved from 7863 to 7864
+The managed add-on now uses 7863 for its CPU engines, and the portal treats an
+address there as its own container, trying to load and unload models on it.
+After updating, run `deploy/macos-voice/setup.sh` again so the launchd agent
+listens on 7864, and change the speech synthesis URL to match.
+:::
 
 Voxtral's voices belong to a language, so the service picks one per sentence
 from the language of the text: `de_female` for German, `casual_female` for

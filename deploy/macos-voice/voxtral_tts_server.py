@@ -14,7 +14,7 @@ Environment:
   VOXTRAL_STEPS      flow-matching steps, default 6 (model default 8; fewer is faster)
   VOXTRAL_VOICE_DE   default de_female
   VOXTRAL_VOICE_EN   default casual_female
-  VOXTRAL_HOST/PORT  default 127.0.0.1:7863
+  VOXTRAL_HOST/PORT  default 127.0.0.1:7864
 """
 
 import json
@@ -35,7 +35,7 @@ STEPS = int(os.environ.get("VOXTRAL_STEPS", "6"))
 VOICE_DE = os.environ.get("VOXTRAL_VOICE_DE", "de_female")
 VOICE_EN = os.environ.get("VOXTRAL_VOICE_EN", "casual_female")
 HOST = os.environ.get("VOXTRAL_HOST", "127.0.0.1")
-PORT = int(os.environ.get("VOXTRAL_PORT", "7863"))
+PORT = int(os.environ.get("VOXTRAL_PORT", "7864"))
 SAMPLE_RATE = 24000
 
 # Words that are common in German and rare in English. Umlauts and ß settle it
