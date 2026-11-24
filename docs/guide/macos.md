@@ -41,8 +41,8 @@ deploy/macos/setup.sh
 
 The script is safe to run again. It:
 
-1. writes a `.env` if there is none — a random `PORTAL_PASSWORD` and
-   `PORTAL_SECRET`, `PORTAL_HOST=127.0.0.1`, workspaces in
+1. writes a `.env` if there is none — a random `PORTAL_SECRET`,
+   `PORTAL_HOST=127.0.0.1`, workspaces in
    `~/Pithagoras/workspaces`, and `OMLX_API_KEY` read from
    `~/.omlx/settings.json`;
 2. checks that oMLX answers with that key;
@@ -52,7 +52,8 @@ The script is safe to run again. It:
    an `AGENTS.md` with conversation rules, into the data volume
    (`/data/home/.pi/agent`). Existing files are kept unless you pass `--force`.
 
-Then open `http://localhost:4100` and log in with the password from `.env`.
+Then open `http://localhost:4100` and choose the portal's password: there is
+none until you do, and **Settings → Authentication** changes it later.
 
 Your own pi installation (`~/.pi/agent`) is not touched: the portal has its own
 agent directory on the data volume.
@@ -89,7 +90,8 @@ pc logs -f portal     # follow the log
 pc up -d --build      # rebuild after changing the code, or: deploy/macos/setup.sh
 ```
 
-Open `http://localhost:4100`. The password is `PORTAL_PASSWORD` in `.env`.
+Open `http://localhost:4100` and log in with the password you chose on the
+first visit.
 
 The container has `restart: unless-stopped`, so it comes back with OrbStack
 after a reboot — unless you stopped it yourself. If Docker Desktop is also
@@ -113,21 +115,27 @@ the server through `tsx watch`, the UI through Vite. Ctrl-C stops both.
 
 What the script does:
 
-- checks for Node 22 or 24 (pi needs ≥ 22.19; `better-sqlite3` does not build
-  on Node 26). With [mise](https://mise.jdx.dev):
-  `mise exec node@22 -- deploy/macos/dev.sh`;
+- checks for Node 22.19 or newer, which pi needs. With
+  [mise](https://mise.jdx.dev): `mise exec node@24 -- deploy/macos/dev.sh`;
 - refuses to start while port 4100 is taken — stop the container first with
   `docker compose -f docker-compose.yml -f docker-compose.macos.yml stop portal`;
-- reads `.env` for the password, secret, oMLX key and workspace folder;
+- reads `.env` for the secret, oMLX key and workspace folder. The password is
+  kept in the database, so the dev portal asks for one of its own on its
+  first start;
 - keeps everything else in `./data/dev` (ignored by git): database, sessions,
   and its own pi agent directory `./data/dev/pi-agent`, seeded from
   `deploy/macos/pi-models.json` and `pi-settings.json`. Neither the container's
   volume nor your own `~/.pi` is touched;
-- runs `npm install` if `node_modules` is missing.
+- runs `npm install` if `node_modules` is missing, builds the extensions
+  (terminal, files, git, documents …) with `npm run build:extensions`, and
+  links the `pi` from `node_modules` into `./data/dev/bin`, where the server
+  finds it.
 
 The agent then runs as your macOS user, not inside a container: it can reach
-anything your account can, not only the workspace folder. Use this for
-development, and the container for everything else.
+anything your account can, not only the workspace folder. The
+[sandbox](/guide/sandbox) needs Linux and is off here: Settings says so. The
+list of the agent's background jobs stays empty, since it reads Linux's
+`/proc`. Use this for development, and the container for everything else.
 
 oMLX, the voice agents and the browser container are the same ones the
 container uses, so they need no extra setup. The built-in terminal opens your
@@ -225,13 +233,9 @@ reachable from the LAN. The portal therefore listens on `127.0.0.1`
 (`PORTAL_HOST`). To reach it from other devices, set `PORTAL_HOST=0.0.0.0`, and
 read [Deploying](/guide/deploying) first.
 
-::: warning Browser add-on ports
-The browser container binds its viewer on `3010`/`3011` (password protected)
-and its stream on `8082` to all interfaces, so those are reachable from the LAN
-even while the portal is not. The DevTools port `9222` stays on loopback. On an
-untrusted network, stop the browser from **Browser → Stop** when you are not
-using it.
-:::
+The browser add-on's own viewer (`3010`/`3011`) listens on `127.0.0.1` as
+well and is reached through the portal's `/browser-ui`. Leave `BROWSER_BIND`
+unset to keep it that way; see [The agent's browser](/guide/browser).
 
 ## Browser
 
